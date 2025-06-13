@@ -134,7 +134,6 @@ class AsignacionController extends ActiveRecord
                 'asig_usuario' => $usuario_id,
                 'asig_app' => $app_id,
                 'asig_permiso' => $permiso_id,
-                'asig_fecha' => date('Y-m-d'),
                 'asig_usuario_asigno' => 1,
                 'asig_motivo' => trim(htmlspecialchars($_POST['asig_motivo'])),
                 'asig_situacion' => 1
@@ -142,7 +141,7 @@ class AsignacionController extends ActiveRecord
 
             $resultado = $asignacion->crear();
 
-            if ($resultado) {
+            if ($resultado['resultado']) {
                 http_response_code(200);
                 echo json_encode([
                     'codigo' => 1,
@@ -313,7 +312,7 @@ class AsignacionController extends ActiveRecord
 
             $resultado = $asignacion->actualizar();
 
-            if ($resultado) {
+            if ($resultado['resultado']) {
                 http_response_code(200);
                 echo json_encode([
                     'codigo' => 1,

@@ -9,7 +9,6 @@ class AsignacionPermisos extends ActiveRecord {
         'asig_usuario',
         'asig_app',
         'asig_permiso',
-        'asig_fecha',
         'asig_quitar_fechaPermiso',
         'asig_usuario_asigno',
         'asig_motivo',
@@ -32,7 +31,7 @@ class AsignacionPermisos extends ActiveRecord {
         $this->asig_usuario = $args['asig_usuario'] ?? 0;
         $this->asig_app = $args['asig_app'] ?? 0;
         $this->asig_permiso = $args['asig_permiso'] ?? 0;
-        $this->asig_fecha = $args['asig_fecha'] ?? null;
+        $this->asig_fecha = $args['asig_fecha'] ?? date('Y-m-d');
         $this->asig_quitar_fechaPermiso = $args['asig_quitar_fechaPermiso'] ?? null;
         $this->asig_usuario_asigno = $args['asig_usuario_asigno'] ?? 0;
         $this->asig_motivo = $args['asig_motivo'] ?? '';
