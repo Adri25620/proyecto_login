@@ -9,7 +9,7 @@ module.exports = {
     'js/usuarios/index' : './src/js/usuarios/index.js',
     'js/aplicacion/index' : './src/js/aplicacion/index.js',
     'js/permisos/index' : './src/js/permisos/index.js',
-
+    'js/asignacion/index' : './src/js/asignacion/index.js',
 
   },
   output: {

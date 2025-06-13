@@ -18,22 +18,22 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav">
           <li class="nav-item me-4">
-            <a class="nav-link active" aria-current="page" href="/app_login/inicio"><i class="bi bi-house"> INICIO</i></a>
+            <a class="nav-link active" aria-current="page" href="/app_login/bienvenida"><i class="bi bi-house"> INICIO</i></a>
+          </li>
+          <li class="nav-item me-4">
+            <a class="nav-link active" aria-current="page" href="/app_login/usuarios"><i class="bi bi-house"> USUARIOS</i></a>
+          </li>
+          <li class="nav-item me-4">
+            <a class="nav-link active" aria-current="page" href="/app_login/aplicacion"><i class="bi bi-house"> APLICACIONES</i></a>
+          </li>
+          <li class="nav-item me-4">
+            <a class="nav-link active" aria-current="page" href="/app_login/asignacion"><i class="bi bi-house"> ASIGNACION PERMISO</i></a>
+          </li>
+          <li class="nav-item me-4">
+            <a class="nav-link active" aria-current="page" href="/app_login/permisos"><i class="bi bi-house"> PERMISOS</i></a>
           </li>
           
-          <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-            ADMINISTRADOR
-          </a>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="/app_login/registro">USUARIOS</a></li>
-            <li><a class="dropdown-item" href="/app_login/permisos">PERMISOS</a></li>
-            <li><a class="dropdown-item" href="/app_login/aplicacion">APLICACIONES</a></li>
-            <li><a class="dropdown-item" href="/app_login/rol">ROLES</a></li>
-          </ul>
-        </li>
-
-        
+        </ul>
       </div>
     </div>
   </nav>

@@ -3,12 +3,14 @@ import { validarFormulario } from '../funciones';
 import DataTable from "datatables.net-bs5";
 import { lenguaje } from "../lenguaje";
 
-const FormPermisos = document.getElementById('FormPermisos');
+const FormAsigPermisos = document.getElementById('FormAsigPermisos');
 const BtnGuardar = document.getElementById('BtnGuardar');
 const BtnModificar = document.getElementById('BtnModificar');
 const BtnLimpiar = document.getElementById('BtnLimpiar');
 const BtnMostrarRegistros = document.getElementById('BtnMostrarRegistros');
 const SeccionTabla = document.getElementById('seccionTablaRegistros');
+const SelectApp = document.getElementById('asig_app');
+const SelectPermiso = document.getElementById('asig_permiso');
 
 const MostrarRegistros = () => {
     const estaOculto = SeccionTabla.style.display === 'none';
@@ -18,7 +20,7 @@ const MostrarRegistros = () => {
         BtnMostrarRegistros.innerHTML = '<i class="bi bi-eye-slash me-2"></i>Ocultar Registros';
         BtnMostrarRegistros.classList.remove('btn-info');
         BtnMostrarRegistros.classList.add('btn-warning');
-        BuscarPermisos(false);
+        BuscarAsignaciones(false);
     } else {
         SeccionTabla.style.display = 'none';
         BtnMostrarRegistros.innerHTML = '<i class="bi bi-eye me-2"></i>Mostrar Registros';
@@ -28,91 +30,135 @@ const MostrarRegistros = () => {
 }
 
 const limpiarTodo = () => {
-    FormPermisos.reset();
+    FormAsigPermisos.reset();
     BtnGuardar.classList.remove('d-none');
     BtnModificar.classList.add('d-none');
+    
+    // Limpiar select de permisos
+    SelectPermiso.innerHTML = '<option value="" selected disabled>Primero seleccione una aplicación...</option>';
 }
 
-const GuardarPermiso = async (event) => {
+// Cargar permisos cuando se selecciona una aplicación
+const CargarPermisos = async () => {
+    const appId = SelectApp.value;
+    
+    if (!appId) {
+        SelectPermiso.innerHTML = '<option value="" selected disabled>Primero seleccione una aplicación...</option>';
+        return;
+    }
+
+    try {
+        SelectPermiso.innerHTML = '<option value="" selected disabled>Cargando permisos...</option>';
+        
+        const url = `/app_login/asignacion/obtenerPermisosAPI?app_id=${appId}`;
+        const config = { method: 'GET' };
+        
+        const respuesta = await fetch(url, config);
+        const permisos = await respuesta.json();
+
+        SelectPermiso.innerHTML = '<option value="" selected disabled>Seleccione un permiso...</option>';
+        
+        if (Array.isArray(permisos) && permisos.length > 0) {
+            permisos.forEach(permiso => {
+                const option = document.createElement('option');
+                option.value = permiso.per_id;
+                option.textContent = `${permiso.per_nombre} (${permiso.per_clave})`;
+                SelectPermiso.appendChild(option);
+            });
+        } else {
+            SelectPermiso.innerHTML = '<option value="" selected disabled>No hay permisos disponibles para esta aplicación</option>';
+        }
+
+    } catch (error) {
+        console.error('Error al cargar permisos:', error);
+        SelectPermiso.innerHTML = '<option value="" selected disabled>Error al cargar permisos</option>';
+        
+        Swal.fire({
+            position: "center",
+            icon: "error",
+            title: "Error",
+            text: "No se pudieron cargar los permisos de la aplicación",
+            showConfirmButton: true,
+        });
+    }
+}
+
+const GuardarAsignacion = async (event) => {
     event.preventDefault();
     BtnGuardar.disabled = true;
 
-    if (!validarFormulario(FormPermisos, ['per_id'])) {
+    if (!validarFormulario(FormAsigPermisos, ['asig_id'])) {
         Swal.fire({
             position: "center",
             icon: "info",
             title: "FORMULARIO INCOMPLETO",
-            text: "Debe de validar todos los campos",
+            text: "Debe completar todos los campos requeridos",
             showConfirmButton: true,
         });
         BtnGuardar.disabled = false;
         return;
     }
 
-    const body = new FormData(FormPermisos);
-
-    const url = '/app_login/permisos/guardarAPI';
+    const body = new FormData(FormAsigPermisos);
+    const url = '/app_login/asignacion/guardarAPI';
     const config = {
         method: 'POST',
         body
     }
 
     try {
-
         const respuesta = await fetch(url, config);
         const datos = await respuesta.json();
-
-        const { codigo, mensaje } = datos
+        const { codigo, mensaje } = datos;
 
         if (codigo == 1) {
-
             await Swal.fire({
                 position: "center",
                 icon: "success",
-                title: "Exito",
+                title: "Éxito",
                 text: mensaje,
                 showConfirmButton: true,
             });
-
             limpiarTodo();
-
         } else {
-
             await Swal.fire({
                 position: "center",
-                icon: "info",
+                icon: "error",
                 title: "Error",
                 text: mensaje,
                 showConfirmButton: true,
             });
-
         }
 
     } catch (error) {
-        console.log(error)
+        console.error('Error:', error);
+        await Swal.fire({
+            position: "center",
+            icon: "error",
+            title: "Error de conexión",
+            text: "No se pudo conectar con el servidor",
+            showConfirmButton: true,
+        });
     }
+    
     BtnGuardar.disabled = false;
-
 }
 
-const BuscarPermisos = async (mostrarMensaje = false) => {
-    const url = '/app_login/permisos/buscarAPI';
-    const config = {
-        method: 'GET'
-    }
+const BuscarAsignaciones = async (mostrarMensaje = false) => {
+    const url = '/app_login/asignacion/buscarAPI';
+    const config = { method: 'GET' };
 
     try {
         const respuesta = await fetch(url, config);
         const datos = await respuesta.json();
 
         if (Array.isArray(datos)) {
-            
             if (mostrarMensaje) {
                 await Swal.fire({
                     position: "center",
                     icon: "success",
-                    title: "Exito",
-                    text: `Se cargaron ${datos.length} permiso(s) correctamente`,
+                    title: "Éxito",
+                    text: `Se cargaron ${datos.length} asignación(es) correctamente`,
                     showConfirmButton: true,
                     timer: 2000
                 });
@@ -122,20 +168,19 @@ const BuscarPermisos = async (mostrarMensaje = false) => {
             datatable.rows.add(datos).draw();
 
         } else {
-            
             if (mostrarMensaje) {
                 await Swal.fire({
                     position: "center",
                     icon: "info",
                     title: "Error",
-                    text: "No se pudieron cargar los permisos",
+                    text: "No se pudieron cargar las asignaciones",
                     showConfirmButton: true,
                 });
             }
         }
 
     } catch (error) {
-        console.log('Error al cargar permisos:', error);
+        console.error('Error al cargar asignaciones:', error);
         
         if (mostrarMensaje) {
             await Swal.fire({
@@ -149,7 +194,7 @@ const BuscarPermisos = async (mostrarMensaje = false) => {
     }
 }
 
-const datatable = new DataTable('#TablePermisos', {
+const datatable = new DataTable('#TableAsigPermisos', {
     dom: `
         <"row mt-3 justify-content-between" 
             <"col" l> 
@@ -167,28 +212,37 @@ const datatable = new DataTable('#TablePermisos', {
     columns: [
         {
             title: 'No.',
-            data: 'per_id',
-            width: '%',
+            data: 'asig_id',
+            width: '5%',
             render: (data, type, row, meta) => meta.row + 1
         },
+        { 
+            title: 'Usuario', 
+            data: null,
+            render: (data, type, row) => `${row.us_nom1} ${row.us_ape1}<br><small class="text-muted">${row.us_correo}</small>`
+        },
         { title: 'Aplicación', data: 'ap_nombre_largo' },
-        { title: 'Nombre', data: 'per_nombre' },
-        { title: 'Clave', data: 'per_clave' },
-        { title: 'Descripción', data: 'per_descripcion' },
+        { 
+            title: 'Permiso', 
+            data: null,
+            render: (data, type, row) => `${row.per_nombre}<br><small class="text-muted">${row.per_clave}</small>`
+        },
+        { title: 'Motivo', data: 'asig_motivo' },
+        { title: 'Fecha Asignación', data: 'asig_fecha' },
         {
             title: 'Acciones',
-            data: 'per_id',
+            data: 'asig_id',
             searchable: false,
             orderable: false,
-            render: (data, type, row, meta) => {
+            render: (data, type, row) => {
                 return `
                  <div class='d-flex justify-content-center'>
                      <button class='btn btn-warning modificar mx-1' 
                          data-id="${data}" 
-                         data-aplicacion="${row.per_aplicacion}"
-                         data-nombre="${row.per_nombre}"
-                         data-clave="${row.per_clave}"
-                         data-descripcion="${row.per_descripcion}">    
+                         data-usuario="${row.asig_usuario}"
+                         data-app="${row.asig_app}"
+                         data-permiso="${row.asig_permiso}"
+                         data-motivo="${row.asig_motivo}">    
                          <i class='bi bi-pencil-square me-1'></i> Modificar
                      </button>
                      <button class='btn btn-danger eliminar mx-1' 
@@ -201,127 +255,126 @@ const datatable = new DataTable('#TablePermisos', {
     ]
 });
 
-const llenarFormulario = (event) => {
+const llenarFormulario = async (event) => {
+    const datos = event.currentTarget.dataset;
 
-    const datos = event.currentTarget.dataset
+    document.getElementById('asig_id').value = datos.id;
+    document.getElementById('asig_usuario').value = datos.usuario;
+    document.getElementById('asig_app').value = datos.app;
+    document.getElementById('asig_motivo').value = datos.motivo;
 
-    document.getElementById('per_id').value = datos.id
-    document.getElementById('per_aplicacion').value = datos.aplicacion
-    document.getElementById('per_nombre').value = datos.nombre
-    document.getElementById('per_clave').value = datos.clave
-    document.getElementById('per_descripcion').value = datos.descripcion
+    // Cargar permisos de la aplicación seleccionada
+    await CargarPermisos();
+    
+    // Después de cargar los permisos, seleccionar el permiso correspondiente
+    setTimeout(() => {
+        document.getElementById('asig_permiso').value = datos.permiso;
+    }, 100);
 
     BtnGuardar.classList.add('d-none');
     BtnModificar.classList.remove('d-none');
 
-    window.scrollTo({
-        top: 0
-    });
+    window.scrollTo({ top: 0 });
 }
 
-const ModificarPermiso = async (event) => {
-
+const ModificarAsignacion = async (event) => {
     event.preventDefault();
     BtnModificar.disabled = true;
 
-    if (!validarFormulario(FormPermisos, [''])) {
+    if (!validarFormulario(FormAsigPermisos)) {
         Swal.fire({
             position: "center",
             icon: "info",
             title: "FORMULARIO INCOMPLETO",
-            text: "Debe de validar todos los campos",
+            text: "Debe completar todos los campos requeridos",
             showConfirmButton: true,
         });
         BtnModificar.disabled = false;
         return;
     }
 
-    const body = new FormData(FormPermisos);
-
-    const url = '/app_login/permisos/modificarAPI';
+    const body = new FormData(FormAsigPermisos);
+    const url = '/app_login/asignacion/modificarAPI';
     const config = {
         method: 'POST',
         body
     }
 
     try {
-
         const respuesta = await fetch(url, config);
         const datos = await respuesta.json();
-        const { codigo, mensaje } = datos
+        const { codigo, mensaje } = datos;
 
         if (codigo == 1) {
-
             await Swal.fire({
                 position: "center",
                 icon: "success",
-                title: "Exito",
+                title: "Éxito",
                 text: mensaje,
                 showConfirmButton: true,
             });
 
             limpiarTodo();
-            BuscarPermisos(true);
+            BuscarAsignaciones(true);
 
         } else {
-
             await Swal.fire({
                 position: "center",
-                icon: "info",
+                icon: "error",
                 title: "Error",
                 text: mensaje,
                 showConfirmButton: true,
             });
-
         }
 
     } catch (error) {
-        console.log(error)
+        console.error('Error:', error);
+        await Swal.fire({
+            position: "center",
+            icon: "error",
+            title: "Error de conexión",
+            text: "No se pudo conectar con el servidor",
+            showConfirmButton: true,
+        });
     }
+    
     BtnModificar.disabled = false;
-
 }
 
-const EliminarPermisos = async (e) => {
-
-    const idPermiso = e.currentTarget.dataset.id
+const EliminarAsignacion = async (e) => {
+    const idAsignacion = e.currentTarget.dataset.id;
 
     const AlertaConfirmarEliminar = await Swal.fire({
         position: "center",
-        icon: "info",
+        icon: "warning",
         title: "¿Desea ejecutar esta acción?",
-        text: 'Esta completamente seguro que desea eliminar este registro',
+        text: '¿Está completamente seguro de que desea eliminar esta asignación?',
         showConfirmButton: true,
-        confirmButtonText: 'Si, Eliminar',
-        confirmButtonColor: 'red',
+        confirmButtonText: 'Sí, Eliminar',
+        confirmButtonColor: '#d33',
         cancelButtonText: 'No, Cancelar',
         showCancelButton: true
     });
 
     if (AlertaConfirmarEliminar.isConfirmed) {
-
-        const url = `/app_login/permisos/eliminarAPI?id=${idPermiso}`;
-        const config = {
-            method: 'GET'
-        }
+        const url = `/app_login/asignacion/eliminarAPI?id=${idAsignacion}`;
+        const config = { method: 'GET' };
 
         try {
-
             const consulta = await fetch(url, config);
             const respuesta = await consulta.json();
             const { codigo, mensaje } = respuesta;
 
             if (codigo == 1) {
-
                 await Swal.fire({
                     position: "center",
                     icon: "success",
-                    title: "Exito",
+                    title: "Éxito",
                     text: mensaje,
                     showConfirmButton: true,
                 });
                 
-                BuscarPermisos(true);
+                BuscarAsignaciones(true);
             } else {
                 await Swal.fire({
                     position: "center",
@@ -333,17 +386,28 @@ const EliminarPermisos = async (e) => {
             }
 
         } catch (error) {
-            console.log(error)
+            console.error('Error:', error);
+            await Swal.fire({
+                position: "center",
+                icon: "error",
+                title: "Error de conexión",
+                text: "No se pudo conectar con el servidor",
+                showConfirmButton: true,
+            });
         }
-
     }
 }
 
-
-BuscarPermisos(); 
-datatable.on('click', '.eliminar', EliminarPermisos);
-datatable.on('click', '.modificar', llenarFormulario);
-FormPermisos.addEventListener('submit', GuardarPermiso);
+// Event Listeners
+SelectApp.addEventListener('change', CargarPermisos);
+FormAsigPermisos.addEventListener('submit', GuardarAsignacion);
 BtnLimpiar.addEventListener('click', limpiarTodo);
-BtnModificar.addEventListener('click', ModificarPermiso);
+BtnModificar.addEventListener('click', ModificarAsignacion);
 BtnMostrarRegistros.addEventListener('click', MostrarRegistros);
+
+// Event listeners de la tabla
+datatable.on('click', '.eliminar', EliminarAsignacion);
+datatable.on('click', '.modificar', llenarFormulario);
+
+// Cargar datos iniciales
+BuscarAsignaciones();

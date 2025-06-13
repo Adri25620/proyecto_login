@@ -3,174 +3,157 @@
 namespace Controllers;
 
 use Exception;
-use MVC\Router;
 use Model\ActiveRecord;
 use Model\Permisos;
+use Model\Aplicacion;
+use MVC\Router;
 
 class PermisosController extends ActiveRecord
 {
 
-    public static function renderizarPagina(Router $router)
+    public function index(Router $router)
     {
-        $router->render('permisos/index', []);
+        $aplicaciones = Aplicacion::where('ap_situacion', 1);
+        
+        $router->render('permisos/index', [
+            'aplicaciones' => $aplicaciones
+        ], 'layout/layouts');
     }
 
     public static function guardarAPI()
     {
         getHeadersApi();
-    
+
+        error_log("Llegó a guardarAPI");
+        error_log("POST data: " . print_r($_POST, true));
+
         try {
-            $_POST['permiso_nombre'] = ucwords(strtolower(trim(htmlspecialchars($_POST['permiso_nombre']))));
-            
-            $cantidad_nombre = strlen($_POST['permiso_nombre']);
-            
-            if ($cantidad_nombre < 2) {
+   
+            if (empty($_POST['per_aplicacion'])) {
                 http_response_code(400);
                 echo json_encode([
                     'codigo' => 0,
-                    'mensaje' => 'Nombre del permiso debe de tener mas de 1 caracteres'
+                    'mensaje' => 'Debe seleccionar una aplicación'
                 ]);
-                exit;
-            }
-            
-            $_POST['permiso_clave'] = strtolower(trim(htmlspecialchars($_POST['permiso_clave'])));
-            
-            $cantidad_clave = strlen($_POST['permiso_clave']);
-            
-            if ($cantidad_clave < 2) {
-                http_response_code(400);
-                echo json_encode([
-                    'codigo' => 0,
-                    'mensaje' => 'Clave del permiso debe de tener mas de 1 caracteres'
-                ]);
-                exit;
-            }
-            
-            $_POST['permiso_desc'] = ucwords(strtolower(trim(htmlspecialchars($_POST['permiso_desc']))));
-            
-            $cantidad_desc = strlen($_POST['permiso_desc']);
-            
-            if ($cantidad_desc < 5) {
-                http_response_code(400);
-                echo json_encode([
-                    'codigo' => 0,
-                    'mensaje' => 'Descripción debe de tener mas de 4 caracteres'
-                ]);
-                exit;
-            }
-            
-            $_POST['app_id'] = filter_var($_POST['app_id'], FILTER_SANITIZE_NUMBER_INT);
-            
-            if ($_POST['app_id'] <= 0) {
-                http_response_code(400);
-                echo json_encode([
-                    'codigo' => 0,
-                    'mensaje' => 'Debe seleccionar una aplicación válida'
-                ]);
-                exit;
+                return;
             }
 
-            $_POST['usuario_id'] = filter_var($_POST['usuario_id'], FILTER_SANITIZE_NUMBER_INT);
-            
-            if ($_POST['usuario_id'] <= 0) {
+            if (empty($_POST['per_nombre'])) {
                 http_response_code(400);
                 echo json_encode([
                     'codigo' => 0,
-                    'mensaje' => 'Debe seleccionar un usuario válido'
+                    'mensaje' => 'El nombre del permiso es obligatorio'
                 ]);
-                exit;
+                return;
             }
 
-            $_POST['permiso_usuario_asigno'] = filter_var($_POST['permiso_usuario_asigno'], FILTER_SANITIZE_NUMBER_INT);
-            
-            if ($_POST['permiso_usuario_asigno'] <= 0) {
+            if (strlen($_POST['per_nombre']) > 150) {
                 http_response_code(400);
                 echo json_encode([
                     'codigo' => 0,
-                    'mensaje' => 'Debe especificar quién asigna el permiso'
+                    'mensaje' => 'El nombre del permiso no puede exceder 150 caracteres'
                 ]);
-                exit;
+                return;
             }
 
-            $_POST['permiso_motivo'] = trim(htmlspecialchars($_POST['permiso_motivo']));
-            $_POST['permiso_tipo'] = trim(htmlspecialchars($_POST['permiso_tipo'])) ?: 'FUNCIONAL';
-            $_POST['permiso_fecha'] = '';
-            
-            $permiso = new Permisos($_POST);
+            if (empty($_POST['per_clave'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'La clave del permiso es obligatoria'
+                ]);
+                return;
+            }
+
+            if (strlen($_POST['per_clave']) > 250) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'La clave del permiso no puede exceder 250 caracteres'
+                ]);
+                return;
+            }
+
+            if (empty($_POST['per_descripcion'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'La descripción del permiso es obligatoria'
+                ]);
+                return;
+            }
+
+            if (strlen($_POST['per_descripcion']) > 250) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'La descripción no puede exceder 250 caracteres'
+                ]);
+                return;
+            }
+
+            $permisoExistente = Permisos::where('per_clave', $_POST['per_clave']);
+            if (!empty($permisoExistente)) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'Ya existe un permiso con esta clave'
+                ]);
+                return;
+            }
+
+            $permiso = new Permisos([
+                'per_aplicacion' => filter_var($_POST['per_aplicacion'], FILTER_SANITIZE_NUMBER_INT),
+                'per_nombre' => ucwords(strtolower(trim(htmlspecialchars($_POST['per_nombre'])))),
+                'per_clave' => strtoupper(trim(htmlspecialchars($_POST['per_clave']))),
+                'per_descripcion' => trim(htmlspecialchars($_POST['per_descripcion'])),
+                'per_situacion' => '1'
+            ]);
+
             $resultado = $permiso->crear();
 
-            if($resultado['resultado'] == 1){
+            if ($resultado) {
                 http_response_code(200);
                 echo json_encode([
                     'codigo' => 1,
-                    'mensaje' => 'Permiso asignado correctamente',
+                    'mensaje' => 'Permiso registrado exitosamente'
                 ]);
-                exit;
             } else {
                 http_response_code(500);
                 echo json_encode([
                     'codigo' => 0,
-                    'mensaje' => 'Error en asignar el permiso',
+                    'mensaje' => 'Error al registrar el permiso'
                 ]);
-                exit;
             }
-            
         } catch (Exception $e) {
             http_response_code(500);
             echo json_encode([
                 'codigo' => 0,
-                'mensaje' => 'Error interno del servidor',
-                'detalle' => $e->getMessage(),
+                'mensaje' => 'Error en el servidor: ' . $e->getMessage()
             ]);
-            exit;
         }
     }
 
     public static function buscarAPI()
     {
+        getHeadersApi();
+
         try {
-            $app_id = isset($_GET['app_id']) ? $_GET['app_id'] : null;
-            $usuario_id = isset($_GET['usuario_id']) ? $_GET['usuario_id'] : null;
-
-            $condiciones = ["p.permiso_situacion = 1"];
-
-            if ($app_id) {
-                $condiciones[] = "p.app_id = {$app_id}";
-            }
-
-            if ($usuario_id) {
-                $condiciones[] = "p.usuario_id = {$usuario_id}";
-            }
-
-            $where = implode(" AND ", $condiciones);
-            $sql = "SELECT 
-                        p.*,
-                        a.app_nombre_corto,
-                        u.usuario_nom1,
-                        u.usuario_ape1,
-                        ua.usuario_nom1 as asigno_nom1,
-                        ua.usuario_ape1 as asigno_ape1
+            $sql = "SELECT p.per_id, p.per_aplicacion, p.per_nombre, p.per_clave, p.per_descripcion, p.per_fecha, p.per_situacion,
+                           a.ap_nombre_largo, a.ap_nombre_medium, a.ap_nombre_corto
                     FROM permiso p 
-                    INNER JOIN aplicacion a ON p.app_id = a.app_id 
-                    INNER JOIN usuario u ON p.usuario_id = u.usuario_id
-                    INNER JOIN usuario ua ON p.permiso_usuario_asigno = ua.usuario_id
-                    WHERE $where 
-                    ORDER BY p.permiso_fecha DESC";
-            $data = self::fetchArray($sql);
+                    INNER JOIN aplicacion a ON p.per_aplicacion = a.ap_id
+                    WHERE p.per_situacion = 1
+                    ORDER BY p.per_fecha DESC";
+            $permisos = self::fetchArray($sql);
 
             http_response_code(200);
-            echo json_encode([
-                'codigo' => 1,
-                'mensaje' => 'Permisos obtenidos correctamente',
-                'data' => $data
-            ]);
-
+            echo json_encode($permisos);
         } catch (Exception $e) {
-            http_response_code(400);
+            http_response_code(500);
             echo json_encode([
                 'codigo' => 0,
-                'mensaje' => 'Error al obtener los permisos',
-                'detalle' => $e->getMessage(),
+                'mensaje' => 'Error al buscar los permisos'
             ]);
         }
     }
@@ -179,163 +162,180 @@ class PermisosController extends ActiveRecord
     {
         getHeadersApi();
 
-        $id = $_POST['permiso_id'];
-        $_POST['permiso_nombre'] = ucwords(strtolower(trim(htmlspecialchars($_POST['permiso_nombre']))));
-
-        $cantidad_nombre = strlen($_POST['permiso_nombre']);
-
-        if ($cantidad_nombre < 2) {
-            http_response_code(400);
-            echo json_encode([
-                'codigo' => 0,
-                'mensaje' => 'Nombre del permiso debe de tener mas de 1 caracteres'
-            ]);
-            return;
-        }
-
-        $_POST['permiso_clave'] = strtolower(trim(htmlspecialchars($_POST['permiso_clave'])));
-
-        $cantidad_clave = strlen($_POST['permiso_clave']);
-
-        if ($cantidad_clave < 2) {
-            http_response_code(400);
-            echo json_encode([
-                'codigo' => 0,
-                'mensaje' => 'Clave del permiso debe de tener mas de 1 caracteres'
-            ]);
-            return;
-        }
-
-        $_POST['permiso_desc'] = ucwords(strtolower(trim(htmlspecialchars($_POST['permiso_desc']))));
-
-        $cantidad_desc = strlen($_POST['permiso_desc']);
-
-        if ($cantidad_desc < 5) {
-            http_response_code(400);
-            echo json_encode([
-                'codigo' => 0,
-                'mensaje' => 'Descripción debe de tener mas de 4 caracteres'
-            ]);
-            return;
-        }
-
-        $_POST['app_id'] = filter_var($_POST['app_id'], FILTER_SANITIZE_NUMBER_INT);
-
-        if ($_POST['app_id'] <= 0) {
-            http_response_code(400);
-            echo json_encode([
-                'codigo' => 0,
-                'mensaje' => 'Debe seleccionar una aplicación válida'
-            ]);
-            return;
-        }
-
-        $_POST['usuario_id'] = filter_var($_POST['usuario_id'], FILTER_SANITIZE_NUMBER_INT);
-
-        if ($_POST['usuario_id'] <= 0) {
-            http_response_code(400);
-            echo json_encode([
-                'codigo' => 0,
-                'mensaje' => 'Debe seleccionar un usuario válido'
-            ]);
-            return;
-        }
-
         try {
-            $data = Permisos::find($id);
-            $data->sincronizar([
-                'usuario_id' => $_POST['usuario_id'],
-                'app_id' => $_POST['app_id'],
-                'permiso_nombre' => $_POST['permiso_nombre'],
-                'permiso_clave' => $_POST['permiso_clave'],
-                'permiso_desc' => $_POST['permiso_desc'],
-                'permiso_tipo' => $_POST['permiso_tipo'] ?? 'FUNCIONAL',
-                'permiso_motivo' => $_POST['permiso_motivo'] ?? '',
-                'permiso_situacion' => 1
-            ]);
-            $data->actualizar();
 
-            http_response_code(200);
-            echo json_encode([
-                'codigo' => 1,
-                'mensaje' => 'La información del permiso ha sido modificada exitosamente'
+            if (empty($_POST['per_id'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'ID de permiso requerido'
+                ]);
+                return;
+            }
+
+            if (empty($_POST['per_aplicacion'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'Debe seleccionar una aplicación'
+                ]);
+                return;
+            }
+
+            if (empty($_POST['per_nombre'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'El nombre del permiso es obligatorio'
+                ]);
+                return;
+            }
+
+            if (strlen($_POST['per_nombre']) > 150) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'El nombre del permiso no puede exceder 150 caracteres'
+                ]);
+                return;
+            }
+
+            if (empty($_POST['per_clave'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'La clave del permiso es obligatoria'
+                ]);
+                return;
+            }
+
+            if (strlen($_POST['per_clave']) > 250) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'La clave del permiso no puede exceder 250 caracteres'
+                ]);
+                return;
+            }
+
+            if (empty($_POST['per_descripcion'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'La descripción del permiso es obligatoria'
+                ]);
+                return;
+            }
+
+            if (strlen($_POST['per_descripcion']) > 250) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'La descripción no puede exceder 250 caracteres'
+                ]);
+                return;
+            }
+
+            $sql = "SELECT * FROM permiso WHERE per_clave = '{$_POST['per_clave']}' AND per_situacion = '1' AND per_id != {$_POST['per_id']}";
+            $permisoExistente = self::fetchArray($sql);
+
+            if (!empty($permisoExistente)) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'Ya existe otro permiso con esta clave'
+                ]);
+                return;
+            }
+
+            $permiso = Permisos::find($_POST['per_id']);
+            if (!$permiso) {
+                http_response_code(404);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'Permiso no encontrado'
+                ]);
+                return;
+            }
+
+            $permiso->sincronizar([
+                'per_aplicacion' => filter_var($_POST['per_aplicacion'], FILTER_SANITIZE_NUMBER_INT),
+                'per_nombre' => ucwords(strtolower(trim(htmlspecialchars($_POST['per_nombre'])))),
+                'per_clave' => strtoupper(trim(htmlspecialchars($_POST['per_clave']))),
+                'per_descripcion' => trim(htmlspecialchars($_POST['per_descripcion']))
             ]);
+
+            $resultado = $permiso->actualizar();
+
+            if ($resultado) {
+                http_response_code(200);
+                echo json_encode([
+                    'codigo' => 1,
+                    'mensaje' => 'Permiso modificado exitosamente'
+                ]);
+            } else {
+                http_response_code(500);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'Error al modificar el permiso'
+                ]);
+            }
         } catch (Exception $e) {
-            http_response_code(400);
+            http_response_code(500);
             echo json_encode([
                 'codigo' => 0,
-                'mensaje' => 'Error al guardar',
-                'detalle' => $e->getMessage(),
+                'mensaje' => 'Error en el servidor: ' . $e->getMessage()
             ]);
         }
     }
 
-    public static function EliminarAPI()
+    public static function eliminarAPI()
     {
-        try {
-            $id = filter_var($_GET['id'], FILTER_SANITIZE_NUMBER_INT);
-            $ejecutar = Permisos::EliminarPermiso($id);
+        getHeadersApi();
 
-            http_response_code(200);
-            echo json_encode([
-                'codigo' => 1,
-                'mensaje' => 'El registro ha sido eliminado correctamente'
-            ]);
+        try {
+  
+            if (empty($_GET['id'])) {
+                http_response_code(400);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'ID de permiso requerido'
+                ]);
+                return;
+            }
+
+            $id = $_GET['id'];
+
+            $permiso = Permisos::find($id);
+            if (!$permiso) {
+                http_response_code(404);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'Permiso no encontrado'
+                ]);
+                return;
+            }
+
+            $resultado = Permisos::EliminarPermiso($id);
+
+            if ($resultado) {
+                http_response_code(200);
+                echo json_encode([
+                    'codigo' => 1,
+                    'mensaje' => 'Permiso eliminado exitosamente'
+                ]);
+            } else {
+                http_response_code(500);
+                echo json_encode([
+                    'codigo' => 0,
+                    'mensaje' => 'Error al eliminar el permiso'
+                ]);
+            }
         } catch (Exception $e) {
-            http_response_code(400);
+            http_response_code(500);
             echo json_encode([
                 'codigo' => 0,
-                'mensaje' => 'Error al Eliminar',
-                'detalle' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    public static function buscarAplicacionesAPI()
-    {
-        try {
-            $sql = "SELECT app_id, app_nombre_corto FROM aplicacion WHERE app_situacion = 1 ORDER BY app_nombre_corto";
-            $data = self::fetchArray($sql);
-
-            http_response_code(200);
-            echo json_encode([
-                'codigo' => 1,
-                'mensaje' => 'Aplicaciones obtenidas correctamente',
-                'data' => $data
-            ]);
-
-        } catch (Exception $e) {
-            http_response_code(400);
-            echo json_encode([
-                'codigo' => 0,
-                'mensaje' => 'Error al obtener las aplicaciones',
-                'detalle' => $e->getMessage(),
-            ]);
-        }
-    }
-
-    public static function buscarUsuariosAPI()
-    {
-        try {
-            $sql = "SELECT usuario_id, usuario_nom1, usuario_ape1 
-                    FROM usuario 
-                    WHERE usuario_situacion = 1 
-                    ORDER BY usuario_nom1";
-            $data = self::fetchArray($sql);
-
-            http_response_code(200);
-            echo json_encode([
-                'codigo' => 1,
-                'mensaje' => 'Usuarios obtenidos correctamente',
-                'data' => $data
-            ]);
-
-        } catch (Exception $e) {
-            http_response_code(400);
-            echo json_encode([
-                'codigo' => 0,
-                'mensaje' => 'Error al obtener los usuarios',
-                'detalle' => $e->getMessage(),
+                'mensaje' => 'Error en el servidor: ' . $e->getMessage()
             ]);
         }
     }
